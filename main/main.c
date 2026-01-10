@@ -29,5 +29,5 @@ void app_main(void)
         
         vTaskDelay(100 / portTICK_PERIOD_MS);      //to avoid watchdog timer errors we need a delay because we are in a blocking loop
     }
-    printf("Your input here: %s\n", str);                
+    printf("Your input was: %s\n", str);                
 }
