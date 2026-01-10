@@ -17,9 +17,7 @@ void updatePerson(Person *p){
     p->age = 33;                        //we change the value at address and not the copy of the variable
 }
 
-void exclamIt(char *p){            //we pass a pointer as parameter so the varialbe passed as so is modified, not the copy
-    strcat(p, "!");
-}
+
 
 void app_main(void){
 
@@ -29,8 +27,7 @@ updatePerson(&person);          // to pass a pointer parameter we use & which gi
                                 // without & we pass a copy of the structure
 printf("%s, %s, %d\n", person.firstName, person.lastName, person.age);
 
-exclamIt(phrase);
-printf("%s\n",phrase);
+
 while(false)
 {
 
