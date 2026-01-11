@@ -12,6 +12,7 @@ git status = print tracked and untracked files
 git add . = add changes to staged memory
 git commit -m "*msg*" = commit with a message
 git push origin main = push committed changes to repository
+git pull origin main = update code from repo
 
 
 //to create repository within vs code terminal
