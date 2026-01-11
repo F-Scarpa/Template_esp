@@ -35,9 +35,9 @@ void app_main(void)
                         //&functionName
                         //friendly name
                         //how much memory to utilize with this task
-                        //optional parameters, always (void *params)
+                        //optional parameters, always (void *params) in func declaration
                         //priority 1-5 (1 is lowest 5 highest)
-                        //handler
+                        //&handler = Used to trigger a task with som events
 
     xTaskCreate(&everySec,"printFast",2048, fastPrinter, 2, NULL);          //fastPrinter is array of char, 
                                                                             //no need to pass as a reference
