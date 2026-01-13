@@ -1,63 +1,32 @@
+
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_random.h"                 //import library for random generation
+              
 #include "math.h"                       //for math functions like abs()
-#include <string.h>
-#include "stdint.h"
-#include "stdlib.h"
-#include "freertos/semphr.h"       
-#include "freertos/event_groups.h"  //library to use event groups
+#include "driver/gpio.h"                //enable use of digital inputs/oututs
 
-
-//event group = multiple events => listen for both ble and http, only after i got both a tast can run
-EventGroupHandle_t evtGrp;        //event group handler
-
-    const int gotHTTP = (1 << 0);           //check if triggered
-    const int gotBLE = (1 << 0);
-
-void task_ListenForHTTP(void *params)                   
-{
-
-    while(true)
-    {
-        xEventGroupSetBits(evtGrp, gotHTTP);        // set gotHTTP event bit to notify listener task
-
-        printf("Received http data\n");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-
-
-void task_listenForBluetooth(void *params)
-{
-    while(true)
-    {   
-        xEventGroupSetBits(evtGrp, gotBLE); 
-        printf("got bluetooth\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-    }
-}
-
-void task_receivedBLEAndHTTP(void *param)
-{
-    while(true)
-    {
-        xEventGroupWaitBits(evtGrp, gotHTTP | gotBLE, true, true, portMAX_DELAY);
-        printf("received http and BLE\n");
-    }
-}
-
-
-
+#define builtInLED 2
+#define buttonPin 15
 
 
 void app_main(void)
-{
 
-    evtGrp = xEventGroupCreate();            //create event group for handler           
-    xTaskCreate(&task_ListenForHTTP,"get http",2048, NULL, 1, NULL);
-    xTaskCreate(&task_listenForBluetooth,"do something with http",2048, NULL, 1, NULL);
-    xTaskCreate(&task_receivedBLEAndHTTP, "get ble and http",2048, NULL, 1 ,NULL);
-            
+{   
+    gpio_set_direction(builtInLED, GPIO_MODE_OUTPUT );               //set direction of pins (input or output)
+    gpio_set_direction(buttonPin,GPIO_MODE_INPUT);
+    gpio_pulldown_en(buttonPin);                                     //set internal pulldown resistor of pin
+    //gpio_pullup_en(******);                                        //set internal pullup resistor of pin
+    //gpio_pullup_dis(******);                                       //disable pullups for pin
+    uint32_t ledOnFlag = 0; 
+
+
+    while(1)
+    {
+        int ledState = gpio_get_level(buttonPin);                   //get voltage level on pin
+        gpio_set_level(builtInLED,ledState);                        //set voltage level on pin
+        
+    }
+
 }
+
