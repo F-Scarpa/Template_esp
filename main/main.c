@@ -1,32 +1,42 @@
-
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-              
-#include "math.h"                       //for math functions like abs()
-#include "driver/gpio.h"                //enable use of digital inputs/oututs
+#include "freertos/queue.h"
+#include "driver/gpio.h"
 
-#define builtInLED 2
-#define buttonPin 15
+#define PIN_SWITCH 15
 
+QueueHandle_t interruptQueue;
 
-void app_main(void)
-
-{   
-    gpio_set_direction(builtInLED, GPIO_MODE_OUTPUT );               //set direction of pins (input or output)
-    gpio_set_direction(buttonPin,GPIO_MODE_INPUT);
-    gpio_pulldown_en(buttonPin);                                     //set internal pulldown resistor of pin
-    //gpio_pullup_en(******);                                        //set internal pullup resistor of pin
-    //gpio_pullup_dis(******);                                       //disable pullups for pin
-    uint32_t ledOnFlag = 0; 
-
-
-    while(1)
-    {
-        int ledState = gpio_get_level(buttonPin);                   //get voltage level on pin
-        gpio_set_level(builtInLED,ledState);                        //set voltage level on pin
-        
-    }
-
+static void IRAM_ATTR gpio_isr_handler(void *args)
+{
+    int pinNumber = (int)args;
+    xQueueSendFromISR(interruptQueue, &pinNumber, NULL);
 }
 
+void buttonPushedTask(void *params)
+{
+    int pinNumber, count = 0;
+    while (true)
+    {
+        if (xQueueReceive(interruptQueue, &pinNumber, portMAX_DELAY))
+        {
+            printf("GPIO %d was pressed %d times. The state is %d\n", pinNumber, count++, gpio_get_level(PIN_SWITCH));
+        }
+    }
+}
+
+void app_main()
+{
+
+    gpio_set_direction(PIN_SWITCH, GPIO_MODE_INPUT);
+    gpio_pulldown_en(PIN_SWITCH);
+    gpio_pullup_dis(PIN_SWITCH);
+    gpio_set_intr_type(PIN_SWITCH, GPIO_INTR_POSEDGE);
+
+    interruptQueue = xQueueCreate(10, sizeof(int));
+    xTaskCreate(buttonPushedTask, "buttonPushedTask", 2048, NULL, 1, NULL);
+
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(PIN_SWITCH, gpio_isr_handler, (void *)PIN_SWITCH);
+}
