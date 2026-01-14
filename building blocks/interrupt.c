@@ -1,4 +1,4 @@
-#include <stdio.h>
+/*#include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -48,3 +48,4 @@ void app_main()
     gpio_isr_handler_add(14, gpio_isr_handler,(void *) 14); 
     gpio_isr_handler_add(5, gpio_isr_handler,(void *) 5);                   //we can use multiple interrupt for different pins
 }
+*/
