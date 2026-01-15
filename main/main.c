@@ -1,19 +1,34 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/dac_oneshot.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_log.h"
 
 void app_main(void)
 {
-    dac_oneshot_handle_t dac_handle;
+    adc_oneshot_unit_handle_t adc_handle;
 
-    dac_oneshot_config_t dac_cfg = {
-        .chan_id = DAC_CHAN_0   // DAC_CHAN_0 = GPIO25, DAC_CHAN_1 = GPIO26
+    // Config ADC1
+    adc_oneshot_unit_init_cfg_t init_config = {
+        .unit_id = ADC_UNIT_1,
+        .ulp_mode = ADC_ULP_MODE_DISABLE                //ULP disabled (Ultra low power processor)
+                                                        //ADC_ULP_MODE_FSM usefull for battery devices or when
+                                                        //esp needs to go sleep
     };
+    adc_oneshot_new_unit(&init_config, &adc_handle);
 
-    ESP_ERROR_CHECK(dac_oneshot_new_channel(&dac_cfg, &dac_handle));
+    // Channel config (ADC1_CHANNEL_6 = GPIO34)
+    adc_oneshot_chan_cfg_t channel_config = {
+        .bitwidth = ADC_BITWIDTH_12,      // 0–4095
+        .atten = ADC_ATTEN_DB_12,           // 0 to ~3.9V
+    };
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_6, &channel_config);
 
-    ESP_ERROR_CHECK(dac_oneshot_output_voltage(dac_handle, 150));               // 0–255 the value select the voltage, if too low ,
-                                                                                //leds may not go high because of the voltage drop
-    printf("OK\n");
+    while (1)
+    {
+        int val = 0;
+        adc_oneshot_read(adc_handle, ADC_CHANNEL_6, &val);
+        printf("ADC value: %d\n", val);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 }
