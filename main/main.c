@@ -1,70 +1,50 @@
 #include <stdio.h>
+#include "esp_timer.h"      //used for timer
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/ledc.h"
+
+void timer_callback(void *args)             //timer callback implementation, always return void and take void *args as param
+                                            //will be called after timer trigger
+{
+    static bool on;
+    on = !on;
+    gpio_set_level(GPIO_NUM_4, on);
+    //printf("CALLED\n");
+}
 
 void app_main(void)
 {
-   //duty cycle = how much time a signal stays high during the period
-   //how much of a pulse is being driven
-   //-   -   -    -  short duty cycle
-   //---- ---- ---- long duty cycle
 
-    //config timer where we set up frequency
-  ledc_timer_config_t timer = {
-      .speed_mode = LEDC_LOW_SPEED_MODE,            //speed = hardware slow = software
-      .duty_resolution = LEDC_TIMER_10_BIT,         //duty cycle = divide frequency by this amount (10bit )
-      .timer_num = LEDC_TIMER_0,                    
-      .freq_hz = 5000,          //hz
-      .clk_cfg = LEDC_AUTO_CLK  //simple configuration for clock
+    gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
+
+    const esp_timer_create_args_t esp_timer_create_args = {             //create a struct for timer
+                                                                            //keys:
+                                                                            //1. timer callback
+                                                                            //2. timer name
+        .callback = timer_callback,
+        .name = "My timer"
     };
-    ledc_timer_config(&timer);      
+
+    esp_timer_handle_t esp_timer_handle;                                //create timer handler, it enables the timer to
+                                                                        //understand which tmer we want to use
 
 
+    esp_timer_create(&esp_timer_create_args, &esp_timer_handle);        //create timer with previous struct and handler
 
+    //2 function to start timers
+    //esp_timer_start_once(esp_timer_handle,20);                  //fire once after 2nd arg microseconds (min 20 us)
+    esp_timer_start_periodic(esp_timer_handle, ((1000*1000)*3));             //fire periodically (min 50 us)
 
-
-   //config channel to control duty cycle, power pushing out 
-          ledc_channel_config_t channel = {
-      .gpio_num = 4,                            //output pin
-      .speed_mode = LEDC_LOW_SPEED_MODE,
-      .channel = LEDC_CHANNEL_0,                    
-      .timer_sel = LEDC_TIMER_0,                //timer we configured before
-      .duty = 1024,                                //how much of a pulse we want to drive
-                                                //duty cycle range depends on timer's duty resolution
-                                                // (0 - 1024 for 10 bits)
-
-      .hpoint = 0               //when duty cycle trigger, classic PWM = hpoint 0
-    };
-    ledc_channel_config(&channel);
-
-    ledc_fade_func_install(0);      //needed to use ledc set duty and update
-    for (int i = 0; i < 1024; i++)
+    int x = 0;
+    while (true)
     {
-        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,i,0);       //params
-                                                                                //1.speed mode
-                                                                                //2.led channel
-                                                                                //3.duty value
-                                                                                //4.0
-        // ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, i);
-        // ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        printf("cc\n");
+        esp_timer_dump(stdout);         //prints some info about timer
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        if (x++ == 5)
+        {
+            esp_timer_stop(esp_timer_handle);           //stop the timer at specified handler
+            esp_timer_delete(esp_timer_handle);         //clean data about timer at specified handler
+        }
     }
-
-  while(true)
-  {
-    
-    ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,0,1000,LEDC_FADE_WAIT_DONE);   
-                                                //params:
-                                                    //1. speed mode
-                                                    //2. channel
-                                                    //3. target duty (fully on = 0)
-                                                    //how much time to get to that point
-                                                    //5. wait for the full cycle to finish
-    ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,1024,1000,LEDC_FADE_WAIT_DONE);
-  }
-
-
-
 }
