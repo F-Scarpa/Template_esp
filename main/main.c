@@ -1,68 +1,70 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/i2c.h"
-#include "esp_types.h"
-
-#define SDA_GPIO 26
-#define SCL_GPIO 25
-#define LM75A_ADDRESS 0X48
+#include "driver/ledc.h"
 
 void app_main()
 {
-    i2c_config_t i2c_config = {             //i2c config
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = SDA_GPIO,
-        .scl_io_num = SCL_GPIO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,        //sda requires a pullup resistor
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,        //scl requires a pullup resistor
-        .master.clk_speed = 100000};
-    i2c_param_config(I2C_NUM_0, &i2c_config);       //1. which i2c wee want to use 
-    i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
+   //duty cycle = how much time a signal stays high during the period
+   //how much of a pulse is being driven
+   //-   -   -    -  short duty cycle
+   //---- ---- ---- long duty cycle
 
-    uint8_t raw[2]; //this sensor reading need 2 registers
-    i2c_cmd_handle_t cmd_handle = i2c_cmd_link_create();        //i2c handler
-    i2c_master_start(cmd_handle);
-    i2c_master_write_byte(cmd_handle, (LM75A_ADDRESS << 1) | I2C_MASTER_READ, true);    //2. target address 
-                                                                                        //3. read command
-                                                                                        //4. device aknowledge
-
-       //read registers 
-    i2c_master_read(cmd_handle, (uint8_t *)&raw, 2, I2C_MASTER_ACK);       //2. address casted as a pointer
-                                                                            //3. byte to fill
-                                                                            //4. goive aknowledgement
-                                                                            
-                                                                            
-    i2c_master_stop(cmd_handle);
-
-    //execute functions we gave to the command handle in the previous steps
-    i2c_master_cmd_begin(I2C_NUM_0, cmd_handle, 1000 / portTICK_PERIOD_MS);     //3. timeout if 
-                                                                                //there's no response
-                                                                                //in selected time
-
-    //free up memory after using the i2c commands                                                                            
-    i2c_cmd_link_delete(cmd_handle);
+    //config timer where we set up frequency
+  ledc_timer_config_t timer = {
+      .speed_mode = LEDC_LOW_SPEED_MODE,            //speed = hardware slow = software
+      .duty_resolution = LEDC_TIMER_10_BIT,         //duty cycle = divide frequency by this amount (10bit )
+      .timer_num = LEDC_TIMER_0,                    
+      .freq_hz = 5000,          //hz
+      .clk_cfg = LEDC_AUTO_CLK  //simple configuration for clock
+    };
+    ledc_timer_config(&timer);      
 
 
 
 
 
-    int16_t data = (raw[0] << 8 | raw[1]) >> 5;         // right shift raw[0] by 8 places (<< 8)
-                                                        //if we use "=" raw[0] would be placed
-                                                        //as the LSB of data
+   //config channel to control duty cycle, power pushing out 
+          ledc_channel_config_t channel = {
+      .gpio_num = 4,                            //output pin
+      .speed_mode = LEDC_LOW_SPEED_MODE,
+      .channel = LEDC_CHANNEL_0,                    
+      .timer_sel = LEDC_TIMER_0,                //timer we configured before
+      .duty = 1024,                                //how much of a pulse we want to drive
+                                                //duty cycle range depends on timer's duty resolution
+                                                // (0 - 1024 for 10 bits)
 
-                                                        //we glue raw[1] to raw[0] ( | raw[1])
-                                                        //since this sensor doesn't use the last 5 bits
-                                                        //we discard them (>> 5)
+      .hpoint = 0               //when duty cycle trigger, classic PWM = hpoint 0
+    };
+    ledc_channel_config(&channel);
 
+    ledc_fade_func_install(0);      //needed to use ledc set duty and update
+    for (int i = 0; i < 1024; i++)
+    {
+        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,i,0);       //params
+                                                                                //1.speed mode
+                                                                                //2.led channel
+                                                                                //3.duty value
+                                                                                //4.0
+        // ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, i);
+        // ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        printf("cc\n");
+    }
+
+  while(true)
+  {
     
-    if (data & (1 << 10)) {          //1 << 10 porta 1 al 10 bit e se anche il 10bit di data è 1 allora 
-                                     //la temp è negativa (D10 = 1)
+    ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,0,1000,LEDC_FADE_WAIT_DONE);   
+                                                //params:
+                                                    //1. speed mode
+                                                    //2. channel
+                                                    //3. target duty (fully on = 0)
+                                                    //how much time to get to that point
+                                                    //5. wait for the full cycle to finish
+    ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,1024,1000,LEDC_FADE_WAIT_DONE);
+  }
 
-    data |= 0xF800;                  //0xF800 fa diventare 1 tutti i bit non usati (dopo D10)
-                                     //uguali a 1 e con l'OR si estende il dato per avere 16bit
-}                                                    
 
-    float temperature = (data * 0.125);
-    printf("temperature %f\n", temperature);
+
 }
