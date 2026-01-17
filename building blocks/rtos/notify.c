@@ -25,7 +25,9 @@ void receiver(void *params){
     {
        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // enables the receiver to be triggered by given notification (wont go next line until triggered)
                                                     //params:
-                                                    //boolean = pdFALSE = one call for every notification given || pdTRUE = one call only
+                                                    //boolean :
+                                                    //pdFALSE = one call for every notification given 
+                                                    //pdTRUE = one call only 
                                                     //timer
        printf("Received notification\n");
     }
