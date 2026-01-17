@@ -1,44 +1,71 @@
 #include <stdio.h>
+#include <time.h>
 #include "esp_log.h"
-#include "driver/uart.h"
-#include "string.h"
+#include "driver/i2c.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-#define TXD_PIN 4
-#define RXD_PIN 5
+#define SDA_PIN 4
+#define SCL_PIN 5
+#define I2C_PORT I2C_NUM_0
+#define PCF8563_ADDR 0x51
 
-#define RX_BUF_SIZE 1024
+static const char *TAG = "PCF8563";
 
-void app_main(void)
-{
-  uart_config_t uart_config = {                                     //configure serial port
-                                                                    //keys:
-                                                                    
-    .baud_rate = 9600,                                              //baud rate
-    .data_bits = UART_DATA_8_BITS,                                  //send 8 bits at a time
-    .parity = UART_PARITY_DISABLE,                                  //
-    .stop_bits = UART_STOP_BITS_1,                                  //
-    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE                           //
-  };
-  uart_param_config(UART_NUM_1 ,&uart_config);          //esp have 3 uart 0 is for serial communication so we use 1
+// Convert BCD to int
+int bcd_to_int(uint8_t val) {
+    return ((val >> 4) * 10) + (val & 0x0F);
+}
 
-  uart_set_pin(UART_NUM_1,TXD_PIN,RXD_PIN,UART_PIN_NO_CHANGE,UART_PIN_NO_CHANGE);   //set pins
-  uart_driver_install(UART_NUM_1,RX_BUF_SIZE,0,0,NULL,0);                           //install uart driver
-                                                                                        //1.uart we are using
-                                                                                        //2. buffer size receiver
-                                                                                        //3. buffer size sender 
-                                                                                        //4. queue size (not used in this example)
-                                                                                        //5. uart queue (NULL here)
-                                                                                        //6. interrupt flag 
+void app_main(void) {
+    // Ritardo iniziale
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-  char message[] = "ping";
-  printf("sending: %s\n", message);
-  uart_write_bytes(UART_NUM_1,message, sizeof(message));                //send message through serial port 
+    // Configurazione I2C
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = SDA_PIN,
+        .scl_io_num = SCL_PIN,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000
+    };
+    ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &conf));
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_PORT, I2C_MODE_MASTER, 0, 0, 0));
 
-  //set up message tobe received
-  char incoming_message[RX_BUF_SIZE];                       
-  memset(incoming_message, 0 , sizeof(incoming_message));       //set all bytes pointed by incoming_message to 0 (clean the buffer)
-  uart_read_bytes(UART_NUM_1,(uint8_t *) incoming_message,RX_BUF_SIZE,pdMS_TO_TICKS(500));
-  printf("received: %s\n",incoming_message);
-  
+    uint8_t buf[7];
 
+    // Creazione comando I2C
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (PCF8563_ADDR << 1) | I2C_MASTER_WRITE, true);
+    i2c_master_write_byte(cmd, 0x02, true);  // Puntatore al registro secondi
+    i2c_master_start(cmd);  // repeated start
+    i2c_master_write_byte(cmd, (PCF8563_ADDR << 1) | I2C_MASTER_READ, true);
+    i2c_master_read(cmd, buf, 6, I2C_MASTER_ACK);  // secondi, minuti, ore, giorno, wday, mese
+    i2c_master_read_byte(cmd, buf + 6, I2C_MASTER_NACK); // anno
+    i2c_master_stop(cmd);
+
+    esp_err_t ret = i2c_master_cmd_begin(I2C_PORT, cmd, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Errore lettura RTC: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    // Conversione BCD → struct tm
+    struct tm dt = {
+        .tm_sec  = bcd_to_int(buf[0] & 0x7F),
+        .tm_min  = bcd_to_int(buf[1] & 0x7F),
+        .tm_hour = bcd_to_int(buf[2] & 0x3F),
+        .tm_mday = bcd_to_int(buf[4] & 0x3F),
+        .tm_wday = buf[3] & 0x07,
+        .tm_mon  = bcd_to_int(buf[5] & 0x1F) - 1,
+        .tm_year = bcd_to_int(buf[6]) + 100  // 2000-based
+    };
+
+    char timestr[64];
+    strftime(timestr, sizeof(timestr), "%c", &dt);
+    ESP_LOGI(TAG, "Ora attuale: %s", timestr);
 }
