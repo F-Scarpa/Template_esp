@@ -1,71 +1,73 @@
+//set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common)
+//we add that line in out Cmakelist file in the root
+
 #include <stdio.h>
-#include <time.h>
+#include "nvs_flash.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "protocol_examples_common.h"
 #include "esp_log.h"
-#include "driver/i2c.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "freertos/semphr.h"
+#include <time.h>
+#include "esp_sntp.h"
 
-#define SDA_PIN 4
-#define SCL_PIN 5
-#define I2C_PORT I2C_NUM_0
-#define PCF8563_ADDR 0x51
+#define TAG "NTP TIME"
 
-static const char *TAG = "PCF8563";
+SemaphoreHandle_t got_time_semaphore;
 
-// Convert BCD to int
-int bcd_to_int(uint8_t val) {
-    return ((val >> 4) * 10) + (val & 0x0F);
+void print_time()           //primnt current time
+{
+    time_t now = 0;
+    time(&now);             //retrieves the time in microseconds
+    struct tm *time_info = localtime(&now);
+
+    char time_buffer[50];
+    strftime(time_buffer, sizeof(time_buffer), "%c", time_info);        //convert time in human readable value from a struct and push that in a string
+                                                                            //3. how we want date to be printed (you can check list on internet)
+    ESP_LOGI(TAG, "************ %s ***********", time_buffer);
 }
 
-void app_main(void) {
-    // Ritardo iniziale
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+void on_got_time(struct timeval *tv)            //timeval struct hold the seconds
+{
+    printf("on got callback %lld\n", tv->tv_sec);
+    print_time();
 
-    // Configurazione I2C
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = SDA_PIN,
-        .scl_io_num = SCL_PIN,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 100000
-    };
-    ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &conf));
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_PORT, I2C_MODE_MASTER, 0, 0, 0));
+    xSemaphoreGive(got_time_semaphore);     //allows the code to go past the semaphore take of got_time_semaphore
+}
 
-    uint8_t buf[7];
+void app_main(void)
+{
+    got_time_semaphore = xSemaphoreCreateBinary();
 
-    // Creazione comando I2C
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (PCF8563_ADDR << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, 0x02, true);  // Puntatore al registro secondi
-    i2c_master_start(cmd);  // repeated start
-    i2c_master_write_byte(cmd, (PCF8563_ADDR << 1) | I2C_MASTER_READ, true);
-    i2c_master_read(cmd, buf, 6, I2C_MASTER_ACK);  // secondi, minuti, ore, giorno, wday, mese
-    i2c_master_read_byte(cmd, buf + 6, I2C_MASTER_NACK); // anno
-    i2c_master_stop(cmd);
+    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);             //global environment variable
+                                                                                        //1. var name
+                                                                                        //2. opnode-time-zones and look for the desired timezone
+                                                                                        //3. overwrite
+    tzset();    //apply the timezone varialbe
 
-    esp_err_t ret = i2c_master_cmd_begin(I2C_PORT, cmd, 1000 / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
+    printf("first time print\n");
+    print_time();
 
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Errore lettura RTC: %s", esp_err_to_name(ret));
-        return;
+    nvs_flash_init();
+    esp_netif_init();
+    esp_event_loop_create_default();
+    example_connect();
+
+
+    //init and setup the ntp
+    esp_sntp_init();
+    esp_sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
+    esp_sntp_setservername(0, "pool.ntp.org");
+    esp_sntp_set_time_sync_notification_cb(on_got_time);
+
+    xSemaphoreTake(got_time_semaphore, portMAX_DELAY);      //stop the code here until callback returns
+
+    for (int i = 0; i < 5; i++)
+    {
+        print_time();
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    // Conversione BCD → struct tm
-    struct tm dt = {
-        .tm_sec  = bcd_to_int(buf[0] & 0x7F),
-        .tm_min  = bcd_to_int(buf[1] & 0x7F),
-        .tm_hour = bcd_to_int(buf[2] & 0x3F),
-        .tm_mday = bcd_to_int(buf[4] & 0x3F),
-        .tm_wday = buf[3] & 0x07,
-        .tm_mon  = bcd_to_int(buf[5] & 0x1F) - 1,
-        .tm_year = bcd_to_int(buf[6]) + 100  // 2000-based
-    };
-
-    char timestr[64];
-    strftime(timestr, sizeof(timestr), "%c", &dt);
-    ESP_LOGI(TAG, "Ora attuale: %s", timestr);
+    esp_restart();      //restart the chip
 }
