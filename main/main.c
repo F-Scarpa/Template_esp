@@ -1,73 +1,85 @@
-//set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common)
-//we add that line in out Cmakelist file in the root
-
 #include <stdio.h>
-#include "nvs_flash.h"
 #include "esp_wifi.h"
-#include "esp_event.h"
-#include "protocol_examples_common.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include <time.h>
-#include "esp_sntp.h"
+#include "nvs_flash.h"
 
-#define TAG "NTP TIME"
+#define MAX_APs 20          //esp32 max Access points
 
-SemaphoreHandle_t got_time_semaphore;
-
-void print_time()           //primnt current time
+char *getAuthModeName(wifi_auth_mode_t wifi_auth_mode)      //return the connection auth mode
 {
-    time_t now = 0;
-    time(&now);             //retrieves the time in microseconds
-    struct tm *time_info = localtime(&now);
+    switch (wifi_auth_mode)
+    {
+    case WIFI_AUTH_OPEN:
+        return "WIFI_AUTH_OPEN";
+    case WIFI_AUTH_WEP:
+        return "WIFI_AUTH_WEP";
+    case WIFI_AUTH_WPA_PSK:
+        return "WIFI_AUTH_WPA_PSK";
+    case WIFI_AUTH_WPA2_PSK:
+        return "WIFI_AUTH_WPA2_PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:
+        return "WIFI_AUTH_WPA_WPA2_PSK";
+    case WIFI_AUTH_WPA2_ENTERPRISE:
+        return "WIFI_AUTH_WPA2_ENTERPRISE";
+    case WIFI_AUTH_WPA3_PSK:
+        return "WIFI_AUTH_WPA3_PSK";
+    case WIFI_AUTH_WPA2_WPA3_PSK:
+        return "WIFI_AUTH_WPA2_WPA3_PSK";
+    case WIFI_AUTH_WAPI_PSK:
+        return "WIFI_AUTH_WAPI_PSK";
+    case WIFI_AUTH_OWE:
+        return "WIFI_AUTH_OWE";
+    case WIFI_AUTH_MAX:
+        return "WIFI_AUTH_MAX";
+    case WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE:
+        return "WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE";
+    case WIFI_AUTH_DPP:
+        return "WIFI_AUTH_DPP";
+    case WIFI_AUTH_WPA3_ENTERPRISE:
+        return "IFI_AUTH_WPA3_ENTERPRISE";
+    case WIFI_AUTH_WPA2_WPA3_ENTERPRISE:
+        return "WIFI_AUTH_WPA2_WPA3_ENTERPRISE";
+    case WIFI_AUTH_WPA_ENTERPRISE:
+        return "WIFI_AUTH_WPA_ENTERPRISE";
+    case WIFI_AUTH_WPA3_ENT_192:
+        return "WIFI_AUTH_WPA3_ENT_192";
+    case WIFI_AUTH_WPA3_EXT_PSK:
+        return "WIFI_AUTH_WPA3_EXT_PSK";
 
-    char time_buffer[50];
-    strftime(time_buffer, sizeof(time_buffer), "%c", time_info);        //convert time in human readable value from a struct and push that in a string
-                                                                            //3. how we want date to be printed (you can check list on internet)
-    ESP_LOGI(TAG, "************ %s ***********", time_buffer);
-}
-
-void on_got_time(struct timeval *tv)            //timeval struct hold the seconds
-{
-    printf("on got callback %lld\n", tv->tv_sec);
-    print_time();
-
-    xSemaphoreGive(got_time_semaphore);     //allows the code to go past the semaphore take of got_time_semaphore
+    }
+    return "UNKNOWN";
 }
 
 void app_main(void)
 {
-    got_time_semaphore = xSemaphoreCreateBinary();
-
-    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);             //global environment variable
-                                                                                        //1. var name
-                                                                                        //2. opnode-time-zones and look for the desired timezone
-                                                                                        //3. overwrite
-    tzset();    //apply the timezone varialbe
-
-    printf("first time print\n");
-    print_time();
-
     nvs_flash_init();
-    esp_netif_init();
-    esp_event_loop_create_default();
-    example_connect();
 
+    wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();       //struct to configure wifi
+                                                                            //wifi_config_default is helper function to fill the structure
+    esp_wifi_init(&wifi_init_config);
+    esp_wifi_set_mode(WIFI_MODE_STA);
+    esp_wifi_start();
 
-    //init and setup the ntp
-    esp_sntp_init();
-    esp_sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
-    esp_sntp_setservername(0, "pool.ntp.org");
-    esp_sntp_set_time_sync_notification_cb(on_got_time);
+    wifi_scan_config_t wifi_scan_config = {     //struct for scan
+        .show_hidden = true,
+        //.channel = 13       //look at a particular channel
+    };
+    esp_wifi_scan_start(&wifi_scan_config, true);       //start scan 2. stop code until wifi scan is completed
 
-    xSemaphoreTake(got_time_semaphore, portMAX_DELAY);      //stop the code here until callback returns
+    wifi_ap_record_t wifi_records[MAX_APs];             //struct to hold the Access Points
+    uint16_t max_record = MAX_APs;
 
-    for (int i = 0; i < 5; i++)
+    esp_wifi_scan_get_ap_records(&max_record, wifi_records);        //
+    
+    //print found APs
+    printf("Found %d access points:\n", max_record);
+    printf("\n");
+    printf("               SSID              | Channel | RSSI |   Auth Mode \n");
+    printf("----------------------------------------------------------------\n");
+    for (int i = 0; i < max_record; i++)
     {
-        print_time();
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        printf("%32s | %7d | %4d | %12s\n", (char *)wifi_records[i].ssid,
+               wifi_records[i].primary, wifi_records[i].rssi,
+               getAuthModeName(wifi_records[i].authmode));
     }
-
-    esp_restart();      //restart the chip
+    printf("----------------------------------------------------------------\n");
 }
