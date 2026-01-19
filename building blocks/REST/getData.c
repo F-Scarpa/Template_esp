@@ -1,3 +1,5 @@
+/*
+
 #include <stdio.h>
 #include "wifi_connect.h"
 #include "esp_http_client.h"    //allows the esp32 to make http requests
@@ -53,3 +55,8 @@ void app_main(void)
     ESP_ERROR_CHECK(wifi_connect_sta("FRITZ!Box 7530 TM", "BVXZH9GCX4V", 10000));
     fetch_quote();
 }
+
+
+
+
+*/
