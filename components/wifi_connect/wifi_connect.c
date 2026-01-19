@@ -13,6 +13,8 @@ static esp_netif_t *esp_netif;  //wifi_connect_sta return value to avoid errors
 static EventGroupHandle_t wifi_events;      //event group allows to have multiple states, semaphore only 1
 static int CONNECTED = BIT0;
 static int DISCONNECTED = BIT1;
+static bool attempt_reconnect = false;
+
 
 char* get_wifi_disconenct_string(wifi_err_reason_t wifi_err_reason);
 int disconnection_error_count = 0;
@@ -38,17 +40,20 @@ void event_handler(void *event_handler_arg, esp_event_base_t event_base,        
                                  get_wifi_disconenct_string(wifi_event_sta_disconnected ->reason));   //else we get disconnected
                                 
 
-            if (wifi_event_sta_disconnected ->reason == WIFI_REASON_NO_AP_FOUND ||
-                wifi_event_sta_disconnected ->reason == WIFI_REASON_ASSOC_LEAVE ||
-                wifi_event_sta_disconnected ->reason == WIFI_REASON_AUTH_EXPIRE)
+            if(attempt_reconnect)
             {
-                if(disconnection_error_count++ < 5)
+                if (wifi_event_sta_disconnected ->reason == WIFI_REASON_NO_AP_FOUND ||
+                    wifi_event_sta_disconnected ->reason == WIFI_REASON_ASSOC_LEAVE ||
+                    wifi_event_sta_disconnected ->reason == WIFI_REASON_AUTH_EXPIRE)
                 {
-                    vTaskDelay(pdMS_TO_TICKS(5000));
-                    esp_wifi_connect();
-                    break;
-                }
+                    if(disconnection_error_count++ < 5)
+                    {
+                        vTaskDelay(pdMS_TO_TICKS(5000));
+                        esp_wifi_connect();
+                        break;
+                    }
 
+                }
             }
             
             xEventGroupSetBits(wifi_events, DISCONNECTED);
@@ -85,7 +90,9 @@ void wifi_connect_init(void)
 
 
 esp_err_t wifi_connect_sta(char* ssid, char* pass, int timeout)
+
 {   
+    attempt_reconnect = true;
     wifi_events = xEventGroupCreate();
     esp_netif = esp_netif_create_default_wifi_sta(); //create interface for station
     esp_wifi_set_mode(WIFI_MODE_STA);
@@ -110,3 +117,27 @@ esp_err_t wifi_connect_sta(char* ssid, char* pass, int timeout)
     }
 
 }
+
+void wifi_connect_ap(const char *ssid, const char *pass)
+{
+    esp_netif = esp_netif_create_default_wifi_ap(); //create interface for access point
+    esp_wifi_set_mode(WIFI_MODE_AP); 
+    wifi_config_t wifi_config = {};
+    strncpy((char*)wifi_config.ap.ssid, ssid, sizeof(wifi_config.ap.ssid)-1);
+    strncpy((char*)wifi_config.ap.password, pass, sizeof(wifi_config.ap.password)-1);
+    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+    wifi_config.ap.max_connection = 4;
+    wifi_config.ap.beacon_interval = 100;       //how often esp will beacon as an access point
+    wifi_config.ap.channel = 1;
+    esp_wifi_set_config(WIFI_IF_AP, &wifi_config);
+    esp_wifi_start();
+
+    
+}
+
+void wifi_disconnect(void)
+{
+    attempt_reconnect = false;
+    esp_wifi_stop();        //stop and freexe sta and AP
+    esp_netif_destroy(esp_netif);
+};
