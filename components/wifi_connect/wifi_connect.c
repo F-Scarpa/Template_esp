@@ -14,7 +14,8 @@ static EventGroupHandle_t wifi_events;      //event group allows to have multipl
 static int CONNECTED = BIT0;
 static int DISCONNECTED = BIT1;
 
-
+char* get_wifi_disconenct_string(wifi_err_reason_t wifi_err_reason);
+int disconnection_error_count = 0;
 //wifi init - 1
 void event_handler(void *event_handler_arg, esp_event_base_t event_base,        //this function is called when WIFI CONNECTS                                                                        
                    int32_t event_id, void *event_data)
@@ -22,16 +23,37 @@ void event_handler(void *event_handler_arg, esp_event_base_t event_base,        
     switch(event_id)
     {
         case WIFI_EVENT_STA_START :
-            ESP_LOGI(TAG, "WIFI_EVENT_STA_START");
-            esp_wifi_connect();
+            ESP_LOGI(TAG, "WIFI_EVENT_STA_START");      //event handler when we start wifi
+            esp_wifi_connect();         //try to connect to wifi
             break;
         case WIFI_EVENT_STA_CONNECTED :
-            ESP_LOGI(TAG, "WIFI_EVENT_STA_CONNECTED");
+            ESP_LOGI(TAG, "WIFI_EVENT_STA_CONNECTED");      //we get here after event group receive the CONNECTED bit
+            disconnection_error_count = 0;
             break;
         case WIFI_EVENT_STA_DISCONNECTED :
-            ESP_LOGI(TAG, "WIFI_EVENT_STA_DISCONNECTED");
+        {
+            wifi_event_sta_disconnected_t *wifi_event_sta_disconnected = event_data; //structure for disconnected wifi
+
+            ESP_LOGW(TAG, "DISCONNECTED %d: %s", wifi_event_sta_disconnected ->reason,
+                                 get_wifi_disconenct_string(wifi_event_sta_disconnected ->reason));   //else we get disconnected
+                                
+
+            if (wifi_event_sta_disconnected ->reason == WIFI_REASON_NO_AP_FOUND ||
+                wifi_event_sta_disconnected ->reason == WIFI_REASON_ASSOC_LEAVE ||
+                wifi_event_sta_disconnected ->reason == WIFI_REASON_AUTH_EXPIRE)
+            {
+                if(disconnection_error_count++ < 5)
+                {
+                    vTaskDelay(pdMS_TO_TICKS(5000));
+                    esp_wifi_connect();
+                    break;
+                }
+
+            }
+            
             xEventGroupSetBits(wifi_events, DISCONNECTED);
             break;
+        }
         case IP_EVENT_STA_GOT_IP :
             ESP_LOGI(TAG, "IP_EVENT_STA_GOT_IP");       //this happens when we connect correctly
             xEventGroupSetBits(wifi_events, CONNECTED);
@@ -52,7 +74,10 @@ void wifi_connect_init(void)
                                                                                                         //2. subscribed events
                                                                                                         //3. event handler
                                                                                                         //4 parameter to pass to handler
+
+    //we wait t oget wifi connection info before going to get ip
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, event_handler, NULL));
+
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));        //store wifi data
 };
 
@@ -68,7 +93,7 @@ esp_err_t wifi_connect_sta(char* ssid, char* pass, int timeout)
     strncpy((char*)wifi_config.sta.ssid,ssid,sizeof(wifi_config.sta.ssid)-1);
     strncpy((char*)wifi_config.sta.password,pass,sizeof(wifi_config.sta.password)-1);
     esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
-    esp_wifi_start();
+    esp_wifi_start();       //start wifi event
     
     EventBits_t result = xEventGroupWaitBits(wifi_events, CONNECTED | DISCONNECTED, true, false, pdMS_TO_TICKS(timeout));//block this function until wifi connect or timeout
                                     //2. bits to listen
