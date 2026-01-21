@@ -1,3 +1,21 @@
+/*
+
+//CMakeLIsts.txt :
+idf_component_register(SRCS "parse_weather.c" "main.c"
+                    INCLUDE_DIRS "."
+                    EMBED_TXTFILES
+                        "../CERT/AMAZON.crt"
+                        "../CERT/Amazon RSA 2048 M02.crt"
+                    )
+
+
+
+
+
+
+
+
+
 #include <stdio.h>
 #include <string.h>
 #include "wifi_connect.h"
@@ -104,7 +122,7 @@ void app_main(void)
     //standard wifi init
     ESP_ERROR_CHECK(nvs_flash_init());
     wifi_connect_init();
-    ESP_ERROR_CHECK(wifi_connect_sta("FRITZ!Box 7530 TM", "BVXZH9GCX4V", 10000));
+    ESP_ERROR_CHECK(wifi_connect_sta("ssid", "pass", 10000));
 
     //action
     while (1) {
@@ -114,3 +132,8 @@ void app_main(void)
 
 
 }
+
+
+
+
+*/
