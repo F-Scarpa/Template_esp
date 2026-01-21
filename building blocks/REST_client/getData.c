@@ -52,7 +52,7 @@ void app_main(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
     wifi_connect_init();
-    ESP_ERROR_CHECK(wifi_connect_sta("FRITZ!Box 7530 TM", "BVXZH9GCX4V", 10000));
+    ESP_ERROR_CHECK(wifi_connect_sta("Ff", "Br4V", 10000));
     fetch_quote();
 }
 

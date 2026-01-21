@@ -1,3 +1,5 @@
+/*
+
 #include <stdio.h>
 #include "wifi_connect.h"
 #include "nvs_flash.h"
@@ -75,8 +77,11 @@ void app_main(void)
   ESP_ERROR_CHECK(nvs_flash_init());
   init_led();
   wifi_connect_init();
-  ESP_ERROR_CHECK(wifi_connect_sta("ssid", "passs", 10000));
+  ESP_ERROR_CHECK(wifi_connect_sta("g TM", "g", 10000));
 
   start_mdns_service();
   init_server();
 }
+
+
+*/
