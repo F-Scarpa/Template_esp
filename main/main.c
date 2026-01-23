@@ -8,11 +8,6 @@
 #include "cJSON.h"
 
 
-//npm run build
-//>dist > assets //this is our website
-//fatfs_create_rawflash_image(storage dir_to_copy_path FLASH_IN_PROJECT) line on main>CMakeLists.txt
-      //to allow to write directory on the chip on the flash memory
-
       
 static const char *TAG = "SERVER";
 

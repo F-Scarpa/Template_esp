@@ -10,5 +10,27 @@ git pull origin main = update code from repo
 ////////
 JSON OBJECT PARSE = shift + alt + F
 
+/////web server
+npm create vite@latest
+cd site
+npm install
+npm run dev
+//add partition:
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     ,        0x6000,
+phy_init, data, phy,     ,        0x1000,
+factory,  app,  factory, ,        1M,
+storage,  data, fat, ,         2M 
+
+configure menuconfig with
+
+the new partition table
+ensure flash size is correct
+allow FAT long file names
+
+in main/CMakeLists add:
+fatfs_create_rawflash_image(storage ../site/dist FLASH_IN_PROJECT)
+
+
 
 
