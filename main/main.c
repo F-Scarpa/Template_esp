@@ -40,7 +40,7 @@ static esp_err_t on_toggle_led_url(httpd_req_t *req)
 }
 
 
-static esp_err_t on_default_url(httpd_req_t *req)     //static = like private member in classes
+static esp_err_t on_default_url(httpd_req_t *req)    
 {                                                     //http home url page
     ESP_LOGI(TAG,"URL: %s",req->uri);
 
