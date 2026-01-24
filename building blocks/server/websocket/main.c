@@ -1,3 +1,7 @@
+/*
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "wifi_connect.h"
@@ -196,3 +200,13 @@ void app_main(void)
   init_server();
 
 }
+
+
+
+
+
+
+
+
+
+*/

@@ -8,6 +8,9 @@ git pull origin main = update code from repo
 
 git push --force origin main = push code ignoring git warning
 
+git fetch origin
+git reset --hard origin/main   = pull code ignoring git warning and deleting changes
+
 
 ////////
 JSON OBJECT PARSE = shift + alt + F
@@ -16,7 +19,9 @@ JSON OBJECT PARSE = shift + alt + F
 npm create vite@latest
 cd site
 npm install
+npm run build
 npm run dev
+
 //add partition:
 # Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     ,        0x6000,
