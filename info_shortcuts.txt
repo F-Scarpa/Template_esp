@@ -6,6 +6,8 @@ git commit -m "*msg*" = commit with a message
 git push origin main = push committed changes to repository
 git pull origin main = update code from repo
 
+git push --force origin main = push code ignoring git warning
+
 
 ////////
 JSON OBJECT PARSE = shift + alt + F
