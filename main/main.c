@@ -22,7 +22,7 @@ static const char *BASE_PATH = "/store";
 static const char *TAG = "SERVER";
 static httpd_handle_t server = NULL;   //server handle
 
-
+//callback functions of urls 
 static esp_err_t on_toggle_led_url(httpd_req_t *req)
 {
   char buffer[100];                                                   //space for payload as string
@@ -43,6 +43,13 @@ static esp_err_t on_toggle_led_url(httpd_req_t *req)
   httpd_resp_send(req,NULL,0);                      //send http status
   return ESP_OK;
 }
+
+static esp_err_t on_hello_world_url(httpd_req_t *req)
+{
+  httpd_resp_sendstr(req,"Hello world");
+  return ESP_OK;
+}
+
 
 #define WS_MAX_SIZE 1024
 static int client_session_id;
@@ -146,7 +153,7 @@ static void init_server()     // can be used to store paths
   ESP_ERROR_CHECK(httpd_start(&server, &config));   //start the server
 
 
-
+//endpoints
   
   httpd_uri_t toggle_led_url = {
       .uri = "/api/toggle-led",         //dont use underscores in uri
@@ -164,6 +171,15 @@ static void init_server()     // can be used to store paths
     };
   httpd_register_uri_handler(server, &web_socket_url);
 
+    httpd_uri_t hello_world_url = {   
+    .uri ="/api/hello-world",                  
+    .method = HTTP_GET,
+    .handler = on_hello_world_url   
+                                
+  };
+  httpd_register_uri_handler(server,&hello_world_url);    
+
+//default always last in sequence because of the wildcard
 
   httpd_uri_t default_url = {   //url = browser address
     .uri ="/*",                  //accept everything (/*)
@@ -173,15 +189,18 @@ static void init_server()     // can be used to store paths
   };
   httpd_register_uri_handler(server,&default_url);    
 
-}
+  
 
+
+
+}
+//mdns service for custom name
 void start_mdns_service()
 {
   mdns_init();
   mdns_hostname_set("my-esp32");    //create our name for server, set the host  type hostname.local
   mdns_instance_name_set("LEARN esp32 thing");
 }
-
 void mount_fs()     //setup for fat memory
 {
    esp_vfs_fat_mount_config_t esp_vfs_fat_mount_config = {
@@ -193,6 +212,8 @@ void mount_fs()     //setup for fat memory
                                                                                       //2. partition name in 
                                                                                       //partition table
 }
+
+
 
 void app_main(void)
 {
