@@ -1,3 +1,4 @@
+/*
 #ifndef parse_weather_h
 #define parse_weather_h
 
@@ -14,3 +15,4 @@ esp_err_t parse_weather(char *weatherStr);
 
 
 #endif
+*/

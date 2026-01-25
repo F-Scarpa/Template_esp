@@ -1,4 +1,4 @@
-
+/*
 
 
 #include <stdio.h>
@@ -7,6 +7,7 @@
 #include "esp_http_client.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include secrets.h
 
 static const char *TAG = "REST";
 extern const uint8_t cert[] asm("_binary_AMAZON_crt_start");        //store certificate inside array ("_binary_certName_start")
@@ -75,7 +76,7 @@ void fetch_quote()
 
     esp_http_client_handle_t client = esp_http_client_init(&esp_http_client_config);
     esp_http_client_set_header(client, "Contnet-Type", "application/json");
-    esp_http_client_set_header(client, "x-rapidapi-key", "a5088f2f2fmshfa72a41b2368229p14010djsn7c4aec708c38");     //API farm give headers
+    esp_http_client_set_header(client, "x-rapidapi-key", API_KEY);     //API farm give headers
     esp_http_client_set_header(client, "x-rapidapi-host", "weather-api167.p.rapidapi.com");
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)

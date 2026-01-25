@@ -1,3 +1,4 @@
+/*
 #include <stdio.h>
 #include <string.h>
 #include "parse_weather.h"
@@ -11,7 +12,7 @@ static const char* TAG = "PARSE WEATHER";
 
 esp_err_t parse_weather(char *weatherStr)
 {
-    cJSON *root = cJSON_Parse(weatherStr);          //create root
+    cJSON *root = cJSON_Parse(weatherStr);
 
     //if error on root
     if (!root) {
@@ -19,8 +20,7 @@ esp_err_t parse_weather(char *weatherStr)
         return ESP_FAIL;                        //return
     }
 
-    cJSON *list = cJSON_GetObjectItem(root, "list");        //search inside root a key named "list" and copy data as object
-                                                            //inside *list pointer
+    cJSON *list = cJSON_GetObjectItem(root, "list");
 
     //if error
     if (!cJSON_IsArray(list)) {
@@ -58,3 +58,4 @@ esp_err_t parse_weather(char *weatherStr)
     cJSON_Delete(root);
     return ESP_OK;
 }
+*/

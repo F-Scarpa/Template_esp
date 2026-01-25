@@ -8,6 +8,7 @@
 #include "toggle_led.h"
 #include "cJSON.h"
 #include "pushBtn.h"
+#include "secrets.h"
 
 
 #include "esp_vfs.h"
@@ -45,7 +46,6 @@ static esp_err_t on_toggle_led_url(httpd_req_t *req)
 
 #define WS_MAX_SIZE 1024
 static int client_session_id;
-
 esp_err_t send_ws_message(char* message)
 {
   if(!client_session_id)
@@ -64,7 +64,6 @@ esp_err_t send_ws_message(char* message)
   httpd_ws_send_frame_async(server, client_session_id, &ws_message);
   return 1;
 }
-
 
 static esp_err_t on_WEB_SOCKET_url(httpd_req_t *req)
 {
@@ -98,6 +97,20 @@ static esp_err_t on_default_url(httpd_req_t *req)
     char path[600];
     sprintf(path, "/store%s", req->uri);      //write a string inside a variable
 
+    /* ******************    setup mimes    ******************************* */
+
+
+    char* ext = strrchr(req -> uri, '.');
+    if(ext)
+    {
+      if(strcmp(ext,".css") == 0) httpd_resp_set_type(req,"text/css");
+      if(strcmp(ext,".js") == 0) httpd_resp_set_type(req,"text/javascript");
+      if(strcmp(ext,".png") == 0) httpd_resp_set_type(req,"image/png");
+      if(strcmp(ext,".jpg") == 0) httpd_resp_set_type(req,"image/jpg");
+      if(strcmp(ext,".svg") == 0) httpd_resp_set_type(req,"image/svg+xml");
+    };
+
+    /* ******************************************************************** */
     FILE *file = fopen(path, "r"); 
     //if path does not exist                   
     if(file == NULL)
@@ -189,7 +202,7 @@ void app_main(void)
   init_btn();
 
   wifi_connect_init();
-  ESP_ERROR_CHECK(wifi_connect_sta("ssid", "pass", 10000));
+  ESP_ERROR_CHECK(wifi_connect_sta(WIFI_SSID, WIFI_PASSWORD, 10000));
 
   start_mdns_service();
   mount_fs();   
