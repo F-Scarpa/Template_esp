@@ -1,4 +1,4 @@
-/*
+
 
 
 #include <stdio.h>
@@ -29,14 +29,16 @@ esp_err_t on_client_data(esp_http_client_event_t *evt)
         chunk_payload_t *chunk_payload = evt->user_data;            //get user data
 
         //realloc change the amount of space the payload is using
+        //http/s send data in chunk, on client data si caleld many times
+        //the buffer is stretched continously
         //1. existing size
         //2. what size do we want
         chunk_payload->buffer = realloc(chunk_payload->buffer, chunk_payload->buffer_index + evt->data_len + 1);
 
         //copy data inside payload
-        //1. target index
-        //2. data
-        //3. how many bytes to copy
+        //1. target index (destination)
+        //2. data (src)
+        //3. how many bytes to copy (length)
         memcpy(&chunk_payload->buffer[chunk_payload->buffer_index],(uint8_t *) evt->data, evt->data_len );      
         chunk_payload->buffer_index = chunk_payload->buffer_index + evt->data_len;      //move buffer index forward
         chunk_payload->buffer[chunk_payload->buffer_index] = 0;
@@ -66,13 +68,14 @@ void fetch_quote()
         //> on CMakeLists include relative path of certificate 
         .url = "https://weather-api167.p.rapidapi.com/api/weather/forecast?place=Sassari",
         .method = HTTP_METHOD_GET,
-        .event_handler = on_client_data,
+        .event_handler = on_client_data,     //func to handle events, as a callback is caleld automatically
         .user_data = &chunk_payload ,        //store incoming data
-        .cert_pem = (char*)cert
+        .cert_pem = (char*)cert              //use certificate
     };
+
     esp_http_client_handle_t client = esp_http_client_init(&esp_http_client_config);
     esp_http_client_set_header(client, "Contnet-Type", "application/json");
-    esp_http_client_set_header(client, "x-rapidapi-key", "a5088f2f2fmshfa72a41b2368229p14010djsn7c4aec708c38");
+    esp_http_client_set_header(client, "x-rapidapi-key", "a5088f2f2fmshfa72a41b2368229p14010djsn7c4aec708c38");     //API farm give headers
     esp_http_client_set_header(client, "x-rapidapi-host", "weather-api167.p.rapidapi.com");
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
@@ -85,7 +88,8 @@ void fetch_quote()
     {
         ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
     }
-    if(chunk_payload.buffer != NULL){           //free memory we created
+     //free memory we created
+    if(chunk_payload.buffer != NULL){          
        free(chunk_payload.buffer); 
     }
     esp_http_client_cleanup(client);
@@ -100,4 +104,4 @@ void app_main(void)
     fetch_quote();
 }
 
-*/
+/*

@@ -3,7 +3,7 @@
 #include "wifi_connect.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
-#include "esp_http_server.h"    //allow to create new server
+#include "esp_http_server.h"    
 #include "mdns.h"
 #include "toggle_led.h"
 #include "cJSON.h"
@@ -136,18 +136,18 @@ static void init_server()     // can be used to store paths
 
   
   httpd_uri_t toggle_led_url = {
-      .uri = "/api/toggle-led",         //dount use underscores in uri
+      .uri = "/api/toggle-led",         //dont use underscores in uri
       .method = HTTP_POST,
-      .handler = on_toggle_led_url
+      .handler = on_toggle_led_url    //function called while uri is visited
     };
-  httpd_register_uri_handler(server, &toggle_led_url);
+  httpd_register_uri_handler(server, &toggle_led_url);    //register the url in the server
 
   
   httpd_uri_t web_socket_url = {
-      .uri = "/ws",         //dount use underscores in uri
+      .uri = "/ws",         
       .method = HTTP_GET,
       .handler = on_WEB_SOCKET_url,
-      .is_websocket = true
+      .is_websocket = true              //for websockets only
     };
   httpd_register_uri_handler(server, &web_socket_url);
 
@@ -155,10 +155,10 @@ static void init_server()     // can be used to store paths
   httpd_uri_t default_url = {   //url = browser address
     .uri ="/*",                  //accept everything (/*)
     .method = HTTP_GET,
-    .handler = on_default_url   //function which will be called when someone visits the url
-                                //with /* every url call this func, unless farther in sequence
+    .handler = on_default_url   
+                                //with /* every url call this func, unless further in sequence
   };
-  httpd_register_uri_handler(server,&default_url);    //register the http
+  httpd_register_uri_handler(server,&default_url);    
 
 }
 
@@ -189,7 +189,7 @@ void app_main(void)
   init_btn();
 
   wifi_connect_init();
-  ESP_ERROR_CHECK(wifi_connect_sta("FRITZ!Box 7530 TM", "BVXZH9GCX4V", 10000));
+  ESP_ERROR_CHECK(wifi_connect_sta("ssid", "pass", 10000));
 
   start_mdns_service();
   mount_fs();   

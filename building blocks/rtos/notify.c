@@ -11,11 +11,11 @@ static TaskHandle_t receiverHandler = NULL;     //variable to handle a task
 void sender(void *params){
     while(1)
     {
-        xTaskNotifyGive(receiverHandler);       //trigger the receiver
+        xTaskNotifyGive(receiverHandler);       //trigger the receiver (send notification)
         xTaskNotifyGive(receiverHandler); 
         xTaskNotifyGive(receiverHandler); 
         xTaskNotifyGive(receiverHandler); 
-        vTaskDelay(5000 / portTICK_PERIOD_MS);  
+        vTaskDelay(5000 / portTICK_PERIOD_MS);  //wait 5 secs
     }
 
 }
@@ -24,11 +24,9 @@ void receiver(void *params){
     while(1)
     {
        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);        // enables the receiver to be triggered by given notification (wont go next line until triggered)
-                                                    //params:
-                                                    //boolean :
-                                                    //pdFALSE = one call for every notification given 
-                                                    //pdTRUE = one call only 
-                                                    //timer
+                                                    //pdFALSE = one call for every notification given (counter - 1)
+                                                    //pdTRUE = one call only (counter to 0)
+                                                    
        printf("Received notification\n");
     }
 
