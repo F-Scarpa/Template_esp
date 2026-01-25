@@ -119,7 +119,7 @@ function App() {
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
-      <h1>ESP32</h1>
+      <h1>pd</h1>
       <h1>
         {message}
       </h1>

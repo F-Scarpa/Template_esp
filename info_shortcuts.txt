@@ -39,5 +39,12 @@ in main/CMakeLists add:
 fatfs_create_rawflash_image(storage ../site/dist FLASH_IN_PROJECT)
 
 
+to make change in frontend:
+esp idf terminal
+cd site
+npm run build
+build flash monitor
+
+
 
 

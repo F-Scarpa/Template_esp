@@ -15,7 +15,7 @@
 #include "esp_vfs_fat.h"
 
 
-
+//
 static const char *BASE_PATH = "/store";   
 
 
@@ -85,7 +85,7 @@ static esp_err_t on_WEB_SOCKET_url(httpd_req_t *req)
   printf("ws payload: %.*s\n", ws_pkt.len, ws_pkt.payload);     //1. length to print 2. start index pointer 
   free(ws_pkt.payload);
 
-  char* response = "connected OK";
+  char* response = "{\"status\":\"connected OK\"}";
   httpd_ws_frame_t ws_response = {
     .final = true,
     .fragmented = false,
@@ -203,6 +203,7 @@ void start_mdns_service()
 }
 void mount_fs()     //setup for fat memory
 {
+
    esp_vfs_fat_mount_config_t esp_vfs_fat_mount_config = {
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
         .max_files = 5,
