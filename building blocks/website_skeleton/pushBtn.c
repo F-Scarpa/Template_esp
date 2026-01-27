@@ -1,3 +1,5 @@
+/*
+
 #include "pushBtn.h"
 
 #include <stdio.h>
@@ -54,3 +56,7 @@ void init_btn(void)
     gpio_install_isr_service(0);
     gpio_isr_handler_add(btn, on_btn_pushed, NULL);         //add interrupt 1. pin 2. interrupt_name
 };
+
+
+
+*/

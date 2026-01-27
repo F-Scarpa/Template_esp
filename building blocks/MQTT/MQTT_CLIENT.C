@@ -1,3 +1,7 @@
+/*
+
+
+
 #include <stdio.h>
 #include "nvs_flash.h"
 #include "wifi_connect.h"
@@ -57,3 +61,6 @@ static void mqtt_event_handler(void *event_handler_arg, esp_event_base_t event_b
         break;
     }
 }
+
+
+*/
