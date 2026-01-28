@@ -14,7 +14,7 @@ void app_main(void)
 
   esp_deep_sleep_start();   //go into deep sleep
                             //deep sleep dont allow the program to continue
-                            //in light slee pthe program continue instead
+                            //in light sleep the program continue instead
 }
 
 */
