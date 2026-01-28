@@ -34,6 +34,9 @@ static void mqtt_event_handler(void *event_handler_arg, esp_event_base_t event_b
     {
     case MQTT_EVENT_CONNECTED:      //check all events of mqtt
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        esp_mqtt_client_subscribe(client,"animal/mammal/cat/felix",1);          //2 what do we want to listen   3. quality of system
+        esp_mqtt_client_subscribe(client,"animal/reptiles/+/slither",1);  
+        esp_mqtt_client_subscribe(client,"animal/fish/#",1);        //any fish
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -47,7 +50,9 @@ static void mqtt_event_handler(void *event_handler_arg, esp_event_base_t event_b
     case MQTT_EVENT_PUBLISHED:
         ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED");
         break;
-    case MQTT_EVENT_DATA:
+    case MQTT_EVENT_DATA:                               //event coming in
+        printf("topic: %.*s\n",event->topic_len, event->topic);                          //print not terminated string but i know the length
+        printf("message: %.*s\n",event->data_len, event->data); 
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         break;
     case MQTT_EVENT_ERROR:
